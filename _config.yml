@@ -10,7 +10,7 @@ destination: docs/
 
 plugins: ['jekyll/scholar', "minimal-mistakes-jekyll"]
 
-baseurl: /docs
+baseurl: /UW790Report
 
 # Site Author
 author:

@@ -1,1 +1,1 @@
-Sitemap: /docs/sitemap.xml
+Sitemap: /UW790Report/sitemap.xml
