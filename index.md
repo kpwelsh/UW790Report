@@ -46,7 +46,7 @@ To explore the limitations myself and build an intuition for the difficulties, I
 
 | Teleoperated | Repeating Demonstration |
 | :---: | :---: |
-| ![Hand Sealant]({{site.baseurl}}/assets/imgs/2022-05-02-13-50-01.png) | {::nomarkdown}<iframe src="https://drive.google.com/file/d/1GLRXsyCzztEiTp7Q-7AdvauyvyqjnAB4/preview" width="640" height="480" allow="autoplay"></iframe>{:/} |
+| {::nomarkdown}<iframe src="https://drive.google.com/file/d/1exVwe5O4blqP4jvdyOQaidEP-MNjA-Rd/preview" width="640" height="480" allow="autoplay"></iframe>{:/} | {::nomarkdown}<iframe src="https://drive.google.com/file/d/1G7Je9HiTtSpk-5DH0KAve5c613w6PjbO/preview" width="448" height="336" allow="autoplay"></iframe>{:/} |
 
 This task was chosen because it contained time pressure and required precise trajectory control, but did not contain force interaction. The result was clear that our current teleoperation system was not sufficient. At this time, I was able to identify several potential points of difficulty.
 
@@ -87,7 +87,7 @@ One additional observation was that the kinematics of the sealant gun were signi
 
 | Input Device | Sealant Gun |
 | :---: | :---: |
-| {::nomarkdown}<iframe src="https://drive.google.com/file/d/1GLRXsyCzztEiTp7Q-7AdvauyvyqjnAB4/preview" width="448" height="336" allow="autoplay"></iframe>{:/} | {::nomarkdown}<iframe src="https://drive.google.com/file/d/1G7Je9HiTtSpk-5DH0KAve5c613w6PjbO/preview" width="448" height="336" allow="autoplay"></iframe>{:/} |
+| ![Vive Input]({{site.baseurl}}/assets/imgs/2022-05-03-10-04-14.png) |  |
 
 
 In particular, because the sealant gun is used with one hand acting as a fulcrum, the user can be much more precise with the angle of the tool while using both hands to stabilize the position. To determine if this was a significant factor, the offset orientation was modified and the Vive controller was placed inside of the gun. The subjective consensus from subsequent tests was that the new kinematics resulted in a much more natural and comfortable input device for the task, but did not remove the fundamental performance bottleneck.
