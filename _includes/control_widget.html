@@ -1,0 +1,135 @@
+<div id="control_widget">
+
+</div>
+<script>
+
+    let T = [];
+    let y = [];
+    const dt = 1e-2;
+    const dt2 = dt * dt;
+    const dt3 = dt2 * dt;
+
+    let QM = 2;
+    let VM = 1;
+    let AM = 10;
+    let JM = 10000;
+    for (let i = 0; i < 1000; i++) {
+        T.push(i * dt);
+    }
+
+    function update_curve(qt, qm, vm, am, jm) {
+        y = [0];
+        let dy = [0];
+        let ddy = [0];
+        let dddy = [0];
+
+        for (let t of T) {
+            let q = y[y.length-1];
+            let dq = dy[y.length-1];
+            let ddq = ddy[y.length-1];
+            let dddq = dddy[y.length-1];
+
+            let q_bounds = [-qm, qm];
+            let dq_bounds = [q - vm * dt, q + vm * dt];
+            let ddq_bounds = [q + dq * dt - am * dt2, q + dq * dt + am * dt2];
+            let dddq_bounds = [q + dq * dt + ddq * dt2 - jm * dt3, q + dq * dt + ddq * dt2 + jm * dt3];
+            
+            let bounds = [
+                q_bounds,
+                dq_bounds,
+                ddq_bounds,
+                dddq_bounds
+            ];
+
+            let bound = bounds.reduce(
+                (a, b) => {
+                    return [
+                        Math.max(a[0], b[0]), 
+                        Math.min(a[1], b[1])
+                    ];
+                }
+            );
+
+            let upper = bound[1];
+            let lower = bound[0];
+
+            if (upper < lower) {
+                break;
+            }
+
+            let next_q = Math.max(Math.min(qt, upper), lower);
+            y.push(next_q);
+            dy.push((next_q - q) / dt);
+            ddy.push(((next_q - q) / dt - dq) / dt);
+            dddy.push((((next_q - q) / dt - dq) / dt - ddq) / dt);
+        }
+
+
+        Plotly.restyle('control_widget', {
+            x: [T.slice(0, y.length)],
+            y: [y]
+        });
+    }
+
+    function make_range_slider(lb, ub, n, name, x, y, l) {
+        let steps = [];
+        for (let i = 0; i <= n; i++) {
+            let v = lb + (ub - lb) * i / n;
+            steps.push({
+                label: Math.round(v * 100) / 100,
+                method: 'skip',
+                args: v,
+                value: v + 1e-5,
+                active: (i == n / 2)
+            })
+        }
+        return {
+            currentvalue: {
+                prefix: `${name}: `,
+            },
+            name: name,
+            pad: {t: 30},
+            steps: steps,
+            len: l,
+            x: x,
+            y: y,
+        };
+    }
+
+    Plotly.newPlot('control_widget', [{
+            x: [],
+            y: []
+        }], {
+            xaxis: {
+                range: [0, T[T.length - 1]]
+            },
+            yaxis: {
+                range: [0, QM]
+            },
+            sliders: [
+                make_range_slider(1+1e-5, 3, 10, 'Max Position', 0., 0.11, 0.5),
+                make_range_slider(1e-5, 5, 10, 'Max Velocity', 0.5, 0.11, 0.5),
+                make_range_slider(1e-5, 20, 10, 'Max Acceleration', 0., -0.3, 0.5),
+                make_range_slider(1e-5, 1000, 50, 'Max Jerk', 0.5, -0.3, 0.5)
+            ]
+        }
+    );
+
+    document.getElementById('control_widget').on('plotly_sliderchange', (e) => {
+        switch (e.slider.name) {
+            case 'Max Position':
+                QM = e.step._input.args;
+                break;
+            case 'Max Velocity':
+                VM = e.step._input.args;
+                break;
+            case 'Max Acceleration':
+                AM = e.step._input.args;
+                break;
+            case 'Max Jerk':
+                JM = e.step._input.args;
+                break;
+        }
+        update_curve(1, QM, VM, AM, JM);
+    });
+</script>

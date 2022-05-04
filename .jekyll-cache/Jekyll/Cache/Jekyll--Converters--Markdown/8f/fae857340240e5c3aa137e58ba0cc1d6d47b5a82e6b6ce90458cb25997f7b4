@@ -1,0 +1,336 @@
+I"c<h1 id="overview">Overview</h1>
+
+<p>Over the past year, I have been attempting to gain insight into why robotic teleoperation is such a hard task. During this investigation, I have built demonstrations and answered questions about control precision, control kinematics, runtime performance conditions and visibility. This report is intended to serve as a summary of what I learned, my thought process throughout, and tools that I built so that future research can leverage my work.</p>
+
+<h1 id="initial-motivation">Initial Motivation</h1>
+
+<p>By working with the <a href="https://frankaemika.github.io/docs/overview.html">Franka Emika Panda</a> robot, I had gained the intuition that robotic teleoperation was not a solved problem. The question of how to control a robot arm at a low level is well studied<a class="citation" href="#kent2017comparison">(Kent et al.)</a>; there are several different well established paradigms for providing inputs with a variety of control schemes, handling haptic feedback, and providing feedback to the user. More recently, novice users were able to control a robot arm with off-the-shelf commerical hardware <a class="citation" href="#rakita2017motion">(Rakita et al.; Rakita)</a>. This method of “Mimicry” based control allowed users to perform tasks with higher dexterity than previuously thought possible (e.g. perform TinkerToy<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup> style assembly). However, the actual performance of human + robot systems were not compelling. I had seen (and have yet to see) a teleoperation system that came close to human performance. While this did not remove the value of such systems, because there were so many variables, it was not clear what was causing the performance drop.</p>
+
+<h1 id="initial-review">Initial Review</h1>
+
+<h2 id="existing-research">Existing Research</h2>
+
+<p>Over the past few decades, there have been a number of papers that explore teleoperation limitations. However, these are generally focused on low level factors, like latency (missing reference) or the limits of haptic feedback <a class="citation" href="#salle2001analysis">(Salle et al.; Chaudhari et al.)</a>, or analyzing the human factors <a class="citation" href="#lathan2002effects">(Lathan and Tracey)</a>. The research that does holistically evaluate the system performance in terms of both input and feedback systems focus on small model tasks and don’t propose a method to achieve human level performance <a class="citation" href="#chen2007human">(Chen et al.)</a>.</p>
+
+<p>The concensus is that the all of the following factors impact performance, but it is not clear which one(s) is(are) the bottleneck(s) for a certain task:</p>
+
+<ol>
+  <li>Visual Feedback
+    <ol>
+      <li>Field of View</li>
+      <li>Presence of Multiple View Points</li>
+      <li>Ego/Ergo-centric Perspective</li>
+      <li>Depth Perception</li>
+      <li>Motion of POV</li>
+    </ol>
+  </li>
+  <li>Control System
+    <ol>
+      <li>Orientation of Controls WRT Robot</li>
+      <li>Time Delays</li>
+    </ol>
+  </li>
+</ol>
+
+<p>From this review, and review of recent teleoperation applications, it was clear that there was a performance gap and it was not obvious where it comes from in robotic arm teleoperation applications<a class="citation" href="#rea2022still">(Rea and Seo)</a>.</p>
+
+<h2 id="initial-hypotheses">Initial Hypotheses</h2>
+
+<p>To explore the limitations myself and build an intuition for the difficulties, I set up an initial comparison between myself teleoperating the Panda with our in-lab developed real time control system and an HTC Vive controller, and a fully automated, open-loop behavior.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">Teleoperated</th>
+      <th style="text-align: center">Repeating Demonstration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center"><img src="/assets/imgs/2022-05-02-13-50-01.png" alt="Hand Sealant" /></td>
+      <td style="text-align: center"><iframe src="https://drive.google.com/file/d/1GLRXsyCzztEiTp7Q-7AdvauyvyqjnAB4/preview" width="640" height="480" allow="autoplay"></iframe></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This task was chosen because it contained time pressure and required precise trajectory control, but did not contain force interaction. The result was clear that our current teleoperation system was not sufficient. At this time, I was able to identify several potential points of difficulty.</p>
+
+<h3 id="control-parameters">Control Parameters</h3>
+
+<p>What is most apparent from the video is that it was not possible to either elicit the necessary high frequency motion of the end-effector as well as react to positioning errors. This was due to two factors: a low-pass filter in the realtime controller, and a latency between user input and robot end-effector. The low-pass filter is typically necessary in real-time control applications to filter out input signal noise and to prevent commanding dangerous motions from the robot. Potential solutions to this issues are discussed in <a href="#heading-solution-development">Solution Development</a>. The presence of latency is a known issue and has been explicitly explored in a number of teleoperation contexts<a class="citation" href="#lum2009teleoperation">(Lum et al.; Rakita et al.)</a>. One succinct study demonstrated that any latency above 75ms had a measurable impact on the motor feedback loop<a class="citation" href="#waltemate2016impact">(Waltemate et al.)</a>.</p>
+
+<p>To analyze the latency between the human hand position and robot hand position, the following system was measured.</p>
+
+<div class="mermaid">
+graph LR;
+  HumanHand --&gt;|0ms| Vive;
+  Vive --&gt;|x ms| Computer;
+  Computer --&gt;|y ms| RobotController;
+  RobotController --&gt;|z ms| RobotHand;
+  RobotHand --&gt;|0ms| Vive2;
+  Vive2 --&gt;|x ms| Computer;
+</div>
+
+<p>We seek the sum \(latency = x + y + z\). By attaching a Vive controller to the robot hand, the human can be removed from the equation etirely, and we only need to measure the round trip time delay between sending a command and getting one back through the Vive controller. By commanding the robot to follow a circular trajectory, \(\vec{r}(t) = (0.4 + 0.1cos(t))\hat{x} + 0.1sin(t) \hat{y} + 0.5\hat{z}\), we can look at the displacement from the initial position as a function of time for both the commands send and the resulting position recorded. Then, finding the optimial shift time that maximally aligns the curve yields the following result.</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td><img src="/assets/imgs/2022-05-03-13-15-31.png" alt="Latency Motion" /></td>
+      <td><img src="/assets/imgs/2022-05-03-13-23-25.png" alt="" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This suggests the system has a total latency of approximately 220ms. However, upon closer inspection, this turned out to be a combination of <em>true latency</em>, which is the amount of time for information to pass through the system as well as <em>dynamic latency</em>, which delay caused by physical limits placed on the robot’s motion. As discussed by Rakita et al. <a class="citation" href="#rakita2020effects">(Rakita et al.)</a>, these types of latency impact user performance differently and should be considered separately. After looking more closely at the amount of time between a command sent and motion detected, the <em>true latency</em> of the system was measured at approximately 50ms. This is consistent with the reported latency of the HTC Vive controllers (20ms) in addition to network latency and other processing steps that are required. These results suggest that the communication latency is not likely a significant source of error in this system, but it is possible that the dynamic latency is reducing performance.</p>
+
+<h3 id="visibility">Visibility</h3>
+
+<p>Despite being co-located with the robot arm, I found that visibility was already an issue. Simply being displaced a few feet away from the task significantly reduced my ability to judge the precise position of the end effector. This strongly suggested that teleoperation performance is highly dependent on specific qualities of the visual feedback. To further explore this, I had a lab member complete a small comparison. They were asked to perform the sealant task twice. Both times they completed it without robot involvement. The first time was with no modification. The second time, however, was while wearing an HTC Vive headset with visual pass-through enabled. This modified their vision from stereoscopic to monoscopic, and reduced the fidelity of the information by reducing the resolution in spatial and color dimensions. While they performed the task relatively easily in the first case, they were unable to precisely position the tool in the second condition and resorted to tapping the tip on against the part to align themselves.</p>
+
+<h3 id="input-device-kinematics">Input Device Kinematics</h3>
+
+<p>One additional observation was that the kinematics of the sealant gun were significantly different than the kinematics of the controller.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">Input Device</th>
+      <th style="text-align: center">Sealant Gun</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center"><iframe src="https://drive.google.com/file/d/1GLRXsyCzztEiTp7Q-7AdvauyvyqjnAB4/preview" width="448" height="336" allow="autoplay"></iframe></td>
+      <td style="text-align: center"><iframe src="https://drive.google.com/file/d/1G7Je9HiTtSpk-5DH0KAve5c613w6PjbO/preview" width="448" height="336" allow="autoplay"></iframe></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>In particular, because the sealant gun is used with one hand acting as a fulcrum, the user can be much more precise with the angle of the tool while using both hands to stabilize the position. To determine if this was a significant factor, the offset orientation was modified and the Vive controller was placed inside of the gun. The subjective consensus from subsequent tests was that the new kinematics resulted in a much more natural and comfortable input device for the task, but did not remove the fundamental performance bottleneck.</p>
+
+<h1 id="solution-development">Solution Development</h1>
+
+<p>To safely control the Panda robot, there was a conservative low-pass filter in place, which prevented commands from resulting in high jerk, accelleration, or velocity. This was done to keep the system within the safe range that is outlined by <a href="https://frankaemika.github.io/docs/control_parameters.html#necessary-conditions">Franka Emika</a>. This is not a perfect solution, however, since such a filter cannot in general prevent violation of these limits unless there are assumed constraints on the range of the commands. Similarly, it has to be extremely conservative to avoid all of the limits in practice. Because of this, I explored multiple techniques for generating time optimal trajectories, with moderate success.</p>
+
+<h2 id="constrained-optimization-for-inverse-kinematics">Constrained Optimization for Inverse Kinematics</h2>
+
+<p>When a cartesian command comes from the user input source, it needs to be converted into a joint command to control the robot arm. Since all of the relevant dynamic constraints are specified in joint-space, this seemed to be a natural place to enforce those constraints are met.</p>
+
+<p>This was done by converting all of the higher order constraints into joint-position constraints based on the current robot state and using a <a href="https://en.wikipedia.org/wiki/Euler_method">Forward Euler</a> discrete differentiation scheme. This is the same scheme that the Franka Emika driver software uses to check if your commands are obeying the limits. The following linear inequalities outline that constraint conversion,with the lower and upper bounds represented by \(\_^-~\text{and}~\_^+\), respectively.</p>
+
+\[\begin{aligned}
+  q^- &amp;\leq ~&amp;q^{t+1} &amp;\leq q^+ \rightarrow &amp; q^- &amp;\leq &amp;q^{t+1} &amp;\leq q^+ \\
+  \dot{q}^- &amp;\leq ~&amp;\dot{q}^{t+1} &amp;\leq \dot{q}^+ \rightarrow &amp; \Delta t\dot{q}^- &amp;\leq ~&amp;q^{t+1}-q^{t} &amp;\leq \Delta t\dot{q}^+ \\
+  \ddot{q}^- &amp;\leq ~&amp;\ddot{q}^{t+1} &amp;\leq \ddot{q}^+ \rightarrow &amp; {\Delta t}^2 \ddot{q}^- &amp;\leq ~&amp;q^{t+1} - q^{t} - \Delta t\dot{q}^t &amp;\leq \Delta t^2\ddot{q}^+ \\
+  \dddot{q}^- &amp;\leq ~&amp;\dddot{q}^{t+1} &amp;\leq \dddot{q}^+\rightarrow &amp; {\Delta t}^3 \dddot{q}^- &amp;\leq ~&amp;q^{t+1} - q^{t} - \Delta t\dot{q}^t - {\Delta t}^2 \ddot{q}^t &amp;\leq {\Delta t}^3 \dddot{q}^+\\
+\end{aligned}\]
+
+<p>Then, the typical optimization that is done to solve the IK problem was augmented to contain these additional dynamic constraints. However, I discovered that this does not often result in apprporiate behavior. Consider that if there is a target angle \(q^*\) which minimizes the IK cost function, the non-linear optimizer will pick the next value of \(q\) to be the closest to \(q^*\). However, this is done in a greedy way that only enforces the constraints at the current timestep. This can result in a dynamic state (\(\{q, \dot{q}, \ddot{q}, \dddot{q}\}\)) that instantaneously satisfies the constraints, but will generate inconsistent constraints some time in the future. As an explicit example, if the joint has a state \(\{q=q^+, \dot{q}=\dot{q}^+, \ddot{q}=\ddot{q}^+, \dddot{q}\}\), then it is impossible to avoid violating the constraints in the next timestep. The widget below gives a visual explanation of the issue. The control system attempts to reach \(q = 1\) as quickly as possible, while maintaining dynamic constraints. If the constraints are inconsistent at any point, the curve will be cut off. Try setting the bounds to \(2, 1, 4, 1000\) to see what the trajectory might look like. From there, increasing the acceleration limit will eventually cause it to become unstable.</p>
+
+<div id="control_widget">
+
+</div>
+<script>
+
+    let T = [];
+    let y = [];
+    const dt = 1e-2;
+    const dt2 = dt * dt;
+    const dt3 = dt2 * dt;
+
+    let QM = 2;
+    let VM = 1;
+    let AM = 10;
+    let JM = 10000;
+    for (let i = 0; i < 1000; i++) {
+        T.push(i * dt);
+    }
+
+    function update_curve(qt, qm, vm, am, jm) {
+        y = [0];
+        let dy = [0];
+        let ddy = [0];
+        let dddy = [0];
+
+        for (let t of T) {
+            let q = y[y.length-1];
+            let dq = dy[y.length-1];
+            let ddq = ddy[y.length-1];
+            let dddq = dddy[y.length-1];
+
+            let q_bounds = [-qm, qm];
+            let dq_bounds = [q - vm * dt, q + vm * dt];
+            let ddq_bounds = [q + dq * dt - am * dt2, q + dq * dt + am * dt2];
+            let dddq_bounds = [q + dq * dt + ddq * dt2 - jm * dt3, q + dq * dt + ddq * dt2 + jm * dt3];
+            
+            let bounds = [
+                q_bounds,
+                dq_bounds,
+                ddq_bounds,
+                dddq_bounds
+            ];
+
+            let bound = bounds.reduce(
+                (a, b) => {
+                    return [
+                        Math.max(a[0], b[0]), 
+                        Math.min(a[1], b[1])
+                    ];
+                }
+            );
+
+            let upper = bound[1];
+            let lower = bound[0];
+
+            if (upper < lower) {
+                break;
+            }
+
+            let next_q = Math.max(Math.min(qt, upper), lower);
+            y.push(next_q);
+            dy.push((next_q - q) / dt);
+            ddy.push(((next_q - q) / dt - dq) / dt);
+            dddy.push((((next_q - q) / dt - dq) / dt - ddq) / dt);
+        }
+
+
+        Plotly.restyle('control_widget', {
+            x: [T.slice(0, y.length)],
+            y: [y]
+        });
+    }
+
+    function make_range_slider(lb, ub, n, name, x, y, l) {
+        let steps = [];
+        for (let i = 0; i <= n; i++) {
+            let v = lb + (ub - lb) * i / n;
+            steps.push({
+                label: Math.round(v * 100) / 100,
+                method: 'skip',
+                args: v,
+                value: v + 1e-5,
+                active: (i == n / 2)
+            })
+        }
+        return {
+            currentvalue: {
+                prefix: `${name}: `,
+            },
+            name: name,
+            pad: {t: 30},
+            steps: steps,
+            len: l,
+            x: x,
+            y: y,
+        };
+    }
+
+    Plotly.newPlot('control_widget', [{
+            x: [],
+            y: []
+        }], {
+            xaxis: {
+                range: [0, T[T.length - 1]]
+            },
+            yaxis: {
+                range: [0, QM]
+            },
+            sliders: [
+                make_range_slider(1+1e-5, 3, 10, 'Max Position', 0., 0.11, 0.5),
+                make_range_slider(1e-5, 5, 10, 'Max Velocity', 0.5, 0.11, 0.5),
+                make_range_slider(1e-5, 20, 10, 'Max Acceleration', 0., -0.3, 0.5),
+                make_range_slider(1e-5, 1000, 50, 'Max Jerk', 0.5, -0.3, 0.5)
+            ]
+        }
+    );
+
+    document.getElementById('control_widget').on('plotly_sliderchange', (e) => {
+        switch (e.slider.name) {
+            case 'Max Position':
+                QM = e.step._input.args;
+                break;
+            case 'Max Velocity':
+                VM = e.step._input.args;
+                break;
+            case 'Max Acceleration':
+                AM = e.step._input.args;
+                break;
+            case 'Max Jerk':
+                JM = e.step._input.args;
+                break;
+        }
+        update_curve(1, QM, VM, AM, JM);
+    });
+</script>
+
+<h2 id="time-optimal-trajectory-generation">Time Optimal Trajectory Generation</h2>
+
+<p>An alternative method, that is much more effective in practice, is to separate <em>where</em> the joint is going (human input + IK) from <em>how</em> it gets there. Because the constraints bound a fourth degree differential equation, it is possible to generate a piecewise fourth degree polynomial that satisfies them. While cumbersome, this can be done analytically and was done by Berscheid and Kröger and released as the Ruckig softwar<a class="citation" href="#berscheid2021jerk">(Berscheid and Kröger)</a>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th><img src="/assets/imgs/2022-05-04-08-55-46.png" alt="Ruckig Plan" /></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Example time optimal trajectory generated by Ruckig. In this example, a trajectory is generated to take a joint from the state \(\{-0.5, 0, 0.5, 0\}\) to the state \(\{0.75, 0.75, 0.3, 0\}\). Figure taken from the <a href="https://github.com/pantor/ruckig">Ruckig Github</a> page.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Simply integrating this into the existing robot arm controller was straightforward. However, there are some issues when commanding very small positional displacements. Because Ruckig generates a trajectory that achieves the precise commanded state as quickly as possible, it gives no consideration for how long it takes to get near the state. This feature becomes an issue in the case where an approximate state can be achieved much more quickly with much less force than the exact state. As an example, moving from the state \(\{0, 0, 0, 0\}\) to \(\{10^{-4}, 0, 0, 0\}\) might not actually require moving at all from a user’s perspective since the system is not likely to be that precise in the first place. However, generating a trajectory plan from Ruckig with realistic dynamic constraints might result in a motion plan with a duration of ~150ms. While this time seems relatively small, during the trajectory significant jerk and acceleration were achieved. As a result, consistently generating such a motion plan is not appropriate for noisy real-time control systems, without additional filtering.</p>
+
+<h1 id="virtual-investigation">Virtual Investigation</h1>
+
+<p>After exploring the possibility of optimizing the real-time control of the physical Panda robot, I determined that it was much more feasible to investigate the performance factors of robot arm teleoperation systems in simulation than in reality. By working in a virtual environment, it is possible to explore the impact of different factors over a much larger parameter space than is currently physically possible. For example, it is very difficult to create a real environment where the latency is below that of our current system, but perfoming the task virtually could give us insight into whether or not it is valuable to pursue a lower latency system.</p>
+
+<h2 id="virtual-sealant">Virtual Sealant</h2>
+
+<p>When designing the virtual environment, I initially aimed to replicate the real sealant task with the following adjustable variables:</p>
+
+<ol>
+  <li>Maximum cartesian velocity</li>
+  <li>Low-pass filter frequency</li>
+  <li>Distance to workspace</li>
+  <li>Fixed vs Dynamic view point</li>
+</ol>
+
+<table>
+  <thead>
+    <tr>
+      <th><iframe src="https://drive.google.com/file/d/1WQ_zmJvkCRyasmeRxCLONaS1OpWZNsuq/preview" width="640" height="480" allow="autoplay"></iframe></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Virtual Sealant task simulated in a Unity environment.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This task provided useful insight into performance factors, but was difficult to objectively evaluate and ultimately not very representative of the class of tasks that could be done with a teleoperated system.</p>
+
+<ol class="bibliography"><li><span id="kent2017comparison">Kent, David, et al. “A Comparison of Remote Robot Teleoperation Interfaces for General Object Manipulation.” <i>Proceedings of the 2017 ACM/IEEE International Conference on Human-Robot Interaction</i>, 2017, pp. 371–79.</span></li>
+<li><span id="rakita2017motion">Rakita, Daniel, et al. “A Motion Retargeting Method for Effective Mimicry-Based Teleoperation of Robot Arms.” <i>Proceedings of the 2017 ACM/IEEE International Conference on Human-Robot Interaction</i>, 2017, pp. 361–70.</span></li>
+<li><span id="rakita2017methods">Rakita, Daniel. “Methods for Effective Mimicry-Based Teleoperation of Robot Arms.” <i>Proceedings of the Companion of the 2017 ACM/IEEE International Conference on Human-Robot Interaction</i>, 2017, pp. 371–72.</span></li>
+<li><span id="rakita2020effects">Rakita, Daniel, et al. “Effects of Onset Latency and Robot Speed Delays on Mimicry-Control Teleoperation.” <i>HRI’20: Proceedings of the 2020 ACM/IEEE International Conference on Human-Robot Interaction</i>, 2020.</span></li>
+<li><span id="kaber2000effects">Kaber, David B., et al. “Effects of Visual Interface Design, and Control Mode and Latency on Performance, Telepresence and Workload in a Teleoperation Task.” <i>Proceedings of the Human Factors and Ergonomics Society Annual Meeting</i>, vol. 44, no. 5, SAGE Publications Sage CA: Los Angeles, CA, 2000, pp. 503–06.</span></li>
+<li><span id="lathan2002effects">Lathan, Corinna E., and Michael Tracey. “The Effects of Operator Spatial Perception and Sensory Feedback on Human-Robot Teleoperation Performance.” <i>Presence</i>, vol. 11, no. 4, MIT Press, 2002, pp. 368–77.</span></li>
+<li><span id="lum2009teleoperation">Lum, Mitchell J. H., et al. “Teleoperation in Surgical Robotics–Network Latency Effects on Surgical Performance.” <i>2009 Annual International Conference of the IEEE Engineering in Medicine and Biology Society</i>, IEEE, 2009, pp. 6860–63.</span></li>
+<li><span id="salle2001analysis">Salle, D., et al. “Analysis of Haptic Feedback Performances in Telesurgery Robotic Systems.” <i>Proceedings 10th IEEE International Workshop on Robot and Human Interactive Communication. ROMAN 2001 (Cat. No. 01TH8591)</i>, IEEE, 2001, pp. 618–23.</span></li>
+<li><span id="chaudhari2011opening">Chaudhari, Rahul, et al. “Opening the Haptic Loop: Network Degradation Limits for Haptic Task Performance.” <i>2011 IEEE International Workshop on Haptic Audio Visual Environments and Games</i>, IEEE, 2011, pp. 56–61.</span></li>
+<li><span id="chen2007human">Chen, Jessie Y. C., et al. “Human Performance Issues and User Interface Design for Teleoperated Robots.” <i>IEEE Transactions on Systems, Man, and Cybernetics, Part C (Applications and Reviews)</i>, vol. 37, no. 6, IEEE, 2007, pp. 1231–45.</span></li>
+<li><span id="rea2022still">Rea, Daniel J., and Stela H. Seo. “Still Not Solved: A Call for Renewed Focus on User-Centered Teleoperation Interfaces.” <i>Frontiers in Robotics and AI</i>, vol. 9, Frontiers Media SA, 2022.</span></li>
+<li><span id="waltemate2016impact">Waltemate, Thomas, et al. “The Impact of Latency on Perceptual Judgments and Motor Performance in Closed-Loop Interaction in Virtual Reality.” <i>Proceedings of the 22nd ACM Conference on Virtual Reality Software and Technology</i>, 2016, pp. 27–35.</span></li>
+<li><span id="berscheid2021jerk">Berscheid, Lars, and Torsten Kröger. “Jerk-Limited Real-Time Trajectory Generation with Arbitrary Target States.” <i>ArXiv Preprint ArXiv:2105.04830</i>, 2021.</span></li></ol>
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p><a href="https://en.wikipedia.org/wiki/Tinkertoy">Tinker Toys</a> <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+:ET
