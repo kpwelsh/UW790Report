@@ -1,4 +1,4 @@
-I"c<h1 id="overview">Overview</h1>
+I"(c<h1 id="overview">Overview</h1>
 
 <p>Over the past year, I have been attempting to gain insight into why robotic teleoperation is such a hard task. During this investigation, I have built demonstrations and answered questions about control precision, control kinematics, runtime performance conditions and visibility. This report is intended to serve as a summary of what I learned, my thought process throughout, and tools that I built so that future research can leverage my work.</p>
 
@@ -47,7 +47,7 @@
   </thead>
   <tbody>
     <tr>
-      <td style="text-align: center"><img src="/assets/imgs/2022-05-02-13-50-01.png" alt="Hand Sealant" /></td>
+      <td style="text-align: center"><img src="/docs/assets/imgs/2022-05-02-13-50-01.png" alt="Hand Sealant" /></td>
       <td style="text-align: center"><iframe src="https://drive.google.com/file/d/1GLRXsyCzztEiTp7Q-7AdvauyvyqjnAB4/preview" width="640" height="480" allow="autoplay"></iframe></td>
     </tr>
   </tbody>
@@ -76,8 +76,8 @@ graph LR;
 <table>
   <tbody>
     <tr>
-      <td><img src="/assets/imgs/2022-05-03-13-15-31.png" alt="Latency Motion" /></td>
-      <td><img src="/assets/imgs/2022-05-03-13-23-25.png" alt="" /></td>
+      <td><img src="/docs/assets/imgs/2022-05-03-13-15-31.png" alt="Latency Motion" /></td>
+      <td><img src="/docs/assets/imgs/2022-05-03-13-23-25.png" alt="" /></td>
     </tr>
   </tbody>
 </table>
@@ -271,7 +271,7 @@ graph LR;
 <table>
   <thead>
     <tr>
-      <th><img src="/assets/imgs/2022-05-04-08-55-46.png" alt="Ruckig Plan" /></th>
+      <th><img src="/docs/assets/imgs/2022-05-04-08-55-46.png" alt="Ruckig Plan" /></th>
     </tr>
   </thead>
   <tbody>

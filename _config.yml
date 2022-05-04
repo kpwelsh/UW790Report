@@ -10,6 +10,8 @@ destination: docs/
 
 plugins: ['jekyll/scholar', "minimal-mistakes-jekyll"]
 
+baseurl: /docs
+
 # Site Author
 author:
   name             : "Kevin Welsh"
