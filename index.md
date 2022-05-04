@@ -46,7 +46,7 @@ To explore the limitations myself and build an intuition for the difficulties, I
 
 | Teleoperated | Repeating Demonstration |
 | :---: | :---: |
-| {::nomarkdown}<iframe src="https://drive.google.com/file/d/1exVwe5O4blqP4jvdyOQaidEP-MNjA-Rd/preview" width="640" height="480" allow="autoplay"></iframe>{:/} | {::nomarkdown}<iframe src="https://drive.google.com/file/d/1G7Je9HiTtSpk-5DH0KAve5c613w6PjbO/preview" width="448" height="336" allow="autoplay"></iframe>{:/} |
+| {::nomarkdown}<iframe src="https://drive.google.com/file/d/1exVwe5O4blqP4jvdyOQaidEP-MNjA-Rd/preview" width="448" height="336" allow="autoplay"></iframe>{:/} | {::nomarkdown}<iframe src="https://drive.google.com/file/d/1G7Je9HiTtSpk-5DH0KAve5c613w6PjbO/preview" width="448" height="336" allow="autoplay"></iframe>{:/} |
 
 This task was chosen because it contained time pressure and required precise trajectory control, but did not contain force interaction. The result was clear that our current teleoperation system was not sufficient. At this time, I was able to identify several potential points of difficulty.
 
