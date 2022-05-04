@@ -87,7 +87,7 @@ One additional observation was that the kinematics of the sealant gun were signi
 
 | Input Device | Sealant Gun |
 | :---: | :---: |
-| ![Vive Input]({{site.baseurl}}/assets/imgs/2022-05-03-10-04-14.png) |  |
+| ![Vive Input]({{site.baseurl}}/assets/imgs/2022-05-03-10-04-14.png) | ![Sealant Gun]({{site.baseurl}}/assets/imgs/2022-05-03-10-03-13.png) |
 
 
 In particular, because the sealant gun is used with one hand acting as a fulcrum, the user can be much more precise with the angle of the tool while using both hands to stabilize the position. To determine if this was a significant factor, the offset orientation was modified and the Vive controller was placed inside of the gun. The subjective consensus from subsequent tests was that the new kinematics resulted in a much more natural and comfortable input device for the task, but did not remove the fundamental performance bottleneck.

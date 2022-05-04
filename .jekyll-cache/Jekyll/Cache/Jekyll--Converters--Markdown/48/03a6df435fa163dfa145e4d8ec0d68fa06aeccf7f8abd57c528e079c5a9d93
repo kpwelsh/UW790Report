@@ -1,4 +1,4 @@
-I"¹b<h1 id="overview">Overview</h1>
+I"c<h1 id="overview">Overview</h1>
 
 <p>Over the past year, I have been attempting to gain insight into why robotic teleoperation is such a hard task. During this investigation, I have built demonstrations and answered questions about control precision, control kinematics, runtime performance conditions and visibility. This report is intended to serve as a summary of what I learned, my thought process throughout, and tools that I built so that future research can leverage my work.</p>
 
@@ -102,7 +102,7 @@ graph LR;
   <tbody>
     <tr>
       <td style="text-align: center"><img src="/UW790Report/assets/imgs/2022-05-03-10-04-14.png" alt="Vive Input" /></td>
-      <td style="text-align: center">Â </td>
+      <td style="text-align: center"><img src="/UW790Report/assets/imgs/2022-05-03-10-03-13.png" alt="Sealant Gun" /></td>
     </tr>
   </tbody>
 </table>
